@@ -1,5 +1,6 @@
 /**
- * Comprehensive IPC & System Automation Contracts for Jarvis v2.0 & v2.5D
+ * Comprehensive IPC & System Automation Contracts for Jarvis v2.5
+ * Hardware Profile: Intel 11th Gen Core i5 Laptop (16GB RAM, Intel Iris Xe)
  */
 
 export type ConnectionState = 'connected' | 'connecting' | 'degraded' | 'disconnected';
@@ -7,6 +8,8 @@ export type ConnectionState = 'connected' | 'connecting' | 'degraded' | 'disconn
 export interface SystemMetrics {
   hostname: string;
   os: string;
+  cpuModel: string;
+  gpuModel: string;
   uptimeSeconds: number;
   cpuLoadPercentage: number;
   memoryUsedPercentage: number;
@@ -18,6 +21,10 @@ export interface SystemMetrics {
   capabilitiesCount: number;
   ollamaOnline?: boolean;
   activeWatcherFilesCount?: number;
+  batteryStatus?: {
+    isCharging: boolean;
+    percentage: number;
+  };
 }
 
 export interface HeartbeatPayload {
@@ -148,22 +155,6 @@ export interface HybridInferenceResult {
   routedReason: string;
 }
 
-// Directory RAG & Chokidar Watcher Types
-export interface WatchedDirectoryConfig {
-  path: string;
-  extensions: string[];
-  debounceMs: number;
-}
-
-export interface CodebaseEmbeddingRecord {
-  id: string;
-  filePath: string;
-  chunkIndex: number;
-  content: string;
-  embedding: number[];
-  updatedAt: string;
-}
-
 // Subagent & 3D Town Spatial Types
 export type AgentState = 'idle' | 'working' | 'building' | 'error' | 'completed';
 
@@ -192,7 +183,6 @@ export interface SubagentEntity {
   state: AgentState;
   currentTask: string;
   progress: number;
-  // 2D & 3D coordinates
   x: number;
   y: number;
   targetX: number;

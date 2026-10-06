@@ -27,9 +27,11 @@ interface JarvisState {
   heartbeatLatencyMs: number;
   transportType: 'electron-ipc' | 'websocket' | 'webrtc' | 'offline';
   systemMetrics: SystemMetrics;
+  powerMode: 'balanced' | 'eco' | 'performance';
 
-  // 2. Spatial Layout & Navigation
-  activeTab: 'canvas' | 'overview' | 'ecosystem' | 'agents' | 'fleet';
+  // 2. Spatial Layout & Comprehensive Navigation
+  activeTab: string; // e.g. 'canvas', 'chat', 'dashboard', 'assistant', 'ide-copilot', 'document', 'spreadsheet', etc.
+  subTab: 'home' | 'overview' | 'ecosystem' | 'agents' | 'projects' | 'fleet';
   activeDrawer: 'none' | 'chat' | 'memory' | 'capabilities' | 'alerts' | 'agent-detail';
   selectedAgentId: string | null;
   canvasZoom: number;
@@ -43,7 +45,7 @@ interface JarvisState {
   pendingToolCalls: ToolCall[];
   allowedCommands: string[];
 
-  // 5. User Profile & Preferences (from screenshot 2)
+  // 5. User Profile & Preferences
   userPreferences: {
     username: string;
     prefersBulletPoints: boolean;
@@ -58,7 +60,9 @@ interface JarvisState {
   recordHeartbeat: (heartbeat: HeartbeatPayload) => void;
   checkHeartbeatLiveness: () => void;
   setActiveDrawer: (drawer: JarvisState['activeDrawer']) => void;
-  setActiveTab: (tab: JarvisState['activeTab']) => void;
+  setActiveTab: (tab: string) => void;
+  setSubTab: (subTab: JarvisState['subTab']) => void;
+  setPowerMode: (mode: JarvisState['powerMode']) => void;
   setSelectedAgent: (agentId: string | null) => void;
   setCanvasZoom: (zoom: number) => void;
 
@@ -77,11 +81,11 @@ interface JarvisState {
 }
 
 const INITIAL_BUILDINGS: TownBuilding[] = [
-  { id: 'bld-core', name: 'Jarvis Core Matrix', category: 'core', x: 400, y: 300, width: 140, height: 110, progress: 100, status: 'active', assignedAgentIds: [] },
-  { id: 'bld-forge', name: 'Data Forge & Pipelines', category: 'data_forge', x: 180, y: 160, width: 120, height: 90, progress: 95, status: 'active', assignedAgentIds: [] },
-  { id: 'bld-workshop', name: 'Code & Build Workshop', category: 'workshop', x: 640, y: 170, width: 125, height: 95, progress: 85, status: 'idle', assignedAgentIds: [] },
-  { id: 'bld-sentry', name: 'Triage Sentry Outpost', category: 'sentry', x: 220, y: 440, width: 110, height: 85, progress: 100, status: 'active', assignedAgentIds: [] },
-  { id: 'bld-archive', name: 'pgvector Memory Vault', category: 'archive', x: 600, y: 430, width: 130, height: 100, progress: 100, status: 'active', assignedAgentIds: [] },
+  { id: 'bld-core', name: 'Jarvis Core Matrix', category: 'core', x: 400, y: 300, position3D: { x: 0, y: 0, z: 0 }, width: 140, height: 110, depth3D: 3.2, progress: 100, status: 'active', assignedAgentIds: [] },
+  { id: 'bld-forge', name: 'Data Forge & Pipelines', category: 'data_forge', x: 180, y: 160, position3D: { x: -8.8, y: 0, z: -5.6 }, width: 120, height: 90, depth3D: 2.8, progress: 95, status: 'active', assignedAgentIds: [] },
+  { id: 'bld-workshop', name: 'Code & Build Workshop', category: 'workshop', x: 640, y: 170, position3D: { x: 9.6, y: 0, z: -5.2 }, width: 125, height: 95, depth3D: 3.0, progress: 85, status: 'idle', assignedAgentIds: [] },
+  { id: 'bld-sentry', name: 'Triage Sentry Outpost', category: 'sentry', x: 220, y: 440, position3D: { x: -7.2, y: 0, z: 5.6 }, width: 110, height: 85, depth3D: 2.6, progress: 100, status: 'active', assignedAgentIds: [] },
+  { id: 'bld-archive', name: 'pgvector Memory Vault', category: 'archive', x: 600, y: 430, position3D: { x: 8.0, y: 0, z: 5.2 }, width: 130, height: 100, depth3D: 3.1, progress: 100, status: 'active', assignedAgentIds: [] },
 ];
 
 const INITIAL_AGENTS: SubagentEntity[] = [
@@ -96,6 +100,8 @@ const INITIAL_AGENTS: SubagentEntity[] = [
     y: 430,
     targetX: 230,
     targetY: 430,
+    position3D: { x: -6.8, y: 0.8, z: 5.2 },
+    target3D: { x: -6.8, y: 0.8, z: 5.2 },
     color: '#10b981',
     targetBuildingId: 'bld-sentry',
     recentMemories: [
@@ -113,6 +119,8 @@ const INITIAL_AGENTS: SubagentEntity[] = [
     y: 190,
     targetX: 630,
     targetY: 190,
+    position3D: { x: 9.2, y: 0.8, z: -4.4 },
+    target3D: { x: 9.2, y: 0.8, z: -4.4 },
     color: '#00f2fe',
     targetBuildingId: 'bld-workshop',
     recentMemories: [
@@ -130,6 +138,8 @@ const INITIAL_AGENTS: SubagentEntity[] = [
     y: 420,
     targetX: 590,
     targetY: 420,
+    position3D: { x: 7.6, y: 0.8, z: 4.8 },
+    target3D: { x: 7.6, y: 0.8, z: 4.8 },
     color: '#8b5cf6',
     targetBuildingId: 'bld-archive',
     recentMemories: [
@@ -139,26 +149,37 @@ const INITIAL_AGENTS: SubagentEntity[] = [
 ];
 
 export const useJarvisStore = create<JarvisState>((set, get) => ({
-  // Single Source of Truth for Status: All components see this identical value!
+  // Single Source of Truth for Status
   coreStatus: 'connected',
   lastHeartbeatTime: Date.now(),
-  heartbeatLatencyMs: 14,
+  heartbeatLatencyMs: 12,
   transportType: typeof window !== 'undefined' && window.jarvisAPI ? 'electron-ipc' : 'websocket',
+  
+  // Hardware Profile: 11th Gen Intel i5 Laptop with 16GB RAM & Intel Iris Xe
   systemMetrics: {
     hostname: 'moh-Vostro-3500 (local)',
-    os: 'Windows 11 Pro',
+    os: 'Windows 11 Pro 64-bit',
+    cpuModel: '11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz',
+    gpuModel: 'Intel(R) Iris(R) Xe Graphics',
     uptimeSeconds: 84920,
-    cpuLoadPercentage: 24,
-    memoryUsedPercentage: 72,
+    cpuLoadPercentage: 18,
+    memoryUsedPercentage: 68,
     memoryTotalGb: 16,
-    diskUsedPercentage: 68,
+    diskUsedPercentage: 72,
     diskTotalGb: 512,
     tailscaleIp: '100.102.44.82',
     isAwake: true,
-    capabilitiesCount: 20
+    capabilitiesCount: 20,
+    ollamaOnline: true,
+    batteryStatus: {
+      isCharging: true,
+      percentage: 88
+    }
   },
+  powerMode: 'balanced',
 
-  activeTab: 'canvas',
+  activeTab: 'canvas', // Default to Jarvis Core Canvas
+  subTab: 'home',
   activeDrawer: 'none',
   selectedAgentId: 'agent-sentinel-1',
   canvasZoom: 1.0,
@@ -170,7 +191,7 @@ export const useJarvisStore = create<JarvisState>((set, get) => ({
     {
       id: 'msg-init-1',
       sender: 'jarvis',
-      content: 'Welcome back, Mohammed. Jarvis Core v2.0 is online. OS Execution Bridge is active, Subagent Town canvas initialized, and state synchronization is unified.',
+      content: 'Welcome back, Mohammed. Jarvis Core v2.5 is online on your 11th Gen i5 laptop (16GB RAM). Responsive top bar and 2.5D spatial workspace calibrated.',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ],
@@ -186,7 +207,6 @@ export const useJarvisStore = create<JarvisState>((set, get) => ({
     notificationEmail: 'mraaziqp@gmail.com'
   },
 
-  // Connection management: changes affect EVERY component synchronously
   setConnectionStatus: (status, transport) => {
     set((state) => ({
       coreStatus: status,
@@ -201,8 +221,6 @@ export const useJarvisStore = create<JarvisState>((set, get) => ({
       lastHeartbeatTime: Date.now(),
       heartbeatLatencyMs: heartbeat.latencyMs,
       transportType: heartbeat.transport,
-      systemMetrics: heartbeat.nodeMetrics,
-      // If heartbeats are streaming in, awake is confirmed
       systemMetrics: {
         ...state.systemMetrics,
         ...heartbeat.nodeMetrics,
@@ -224,6 +242,8 @@ export const useJarvisStore = create<JarvisState>((set, get) => ({
 
   setActiveDrawer: (drawer) => set({ activeDrawer: drawer }),
   setActiveTab: (tab) => set({ activeTab: tab }),
+  setSubTab: (subTab) => set({ subTab: subTab }),
+  setPowerMode: (mode) => set({ powerMode: mode }),
   setSelectedAgent: (agentId) => set({ selectedAgentId: agentId }),
   setCanvasZoom: (zoom) => set({ canvasZoom: Math.max(0.6, Math.min(1.8, zoom)) }),
 
@@ -247,10 +267,12 @@ export const useJarvisStore = create<JarvisState>((set, get) => ({
       state: 'working',
       currentTask: task,
       progress: 5,
-      x: 400 + (Math.random() * 40 - 20), // Starts from central core
+      x: 400 + (Math.random() * 40 - 20),
       y: 300 + (Math.random() * 40 - 20),
       targetX: targetBuilding.x + (Math.random() * 40 - 20),
       targetY: targetBuilding.y + (Math.random() * 40 - 20),
+      position3D: { x: (Math.random() * 2 - 1), y: 0.8, z: (Math.random() * 2 - 1) },
+      target3D: { x: targetBuilding.position3D.x + (Math.random() * 1.5 - 0.75), y: 0.8, z: targetBuilding.position3D.z + (Math.random() * 1.5 - 0.75) },
       color: colors[role] || '#00f2fe',
       targetBuildingId: targetBuilding.id,
       recentMemories: [
@@ -349,24 +371,21 @@ export const useJarvisStore = create<JarvisState>((set, get) => ({
     const tool = get().pendingToolCalls.find(t => t.id === toolCallId);
     if (!tool) return null;
 
-    // Remove from pending
     set((state) => ({
       pendingToolCalls: state.pendingToolCalls.filter(t => t.id !== toolCallId),
       messages: state.messages.map(m => m.toolCall?.id === toolCallId ? { ...m, status: 'executing' } : m)
     }));
 
-    // Trigger execution via window.jarvisAPI or mock if in browser
     let result: ToolResult;
     if (typeof window !== 'undefined' && window.jarvisAPI) {
       result = await window.jarvisAPI.invokeTool(tool);
     } else {
-      // Mock execution for browser sandbox / preview
       await new Promise(r => setTimeout(r, 600));
       result = {
         toolCallId: tool.id,
         name: tool.name,
         success: true,
-        data: { message: `Simulated local execution of ${tool.name}` },
+        data: { message: `Simulated local execution of ${tool.name} on Intel i5 laptop.` },
         timestamp: Date.now()
       };
     }

@@ -10,13 +10,17 @@ import { SubagentMesh } from './SubagentMesh';
 import { useJarvisStore } from '../../store/useJarvisStore';
 
 export const TownScene: React.FC = () => {
-  const { agents, buildings, selectedAgentId, setSelectedAgent } = useJarvisStore();
+  const { agents, buildings, selectedAgentId, setSelectedAgent, powerMode } = useJarvisStore();
+
+  const isEco = powerMode === 'eco';
+  const shadowResolution = isEco ? 512 : 1024; // Tuned for 11th Gen Intel i5 + Intel Iris Xe
 
   return (
     <Canvas
-      shadows
+      shadows={!isEco}
+      dpr={[1, 1.25]} // Capped to 1.25x for high FPS and low thermals on 11th Gen laptop
       gl={{
-        powerPreference: 'high-performance', // Targets NVIDIA RTX 3060 Ti
+        powerPreference: 'default', // Battery and thermal friendly for laptops
         antialias: true,
         alpha: true,
         stencil: false,
@@ -38,18 +42,18 @@ export const TownScene: React.FC = () => {
         enablePan={true}
         enableZoom={true}
         minPolarAngle={Math.PI / 6}
-        maxPolarAngle={Math.PI / 2.3} // Restrict from going beneath ground
+        maxPolarAngle={Math.PI / 2.3}
         minDistance={8}
         maxDistance={45}
       />
 
-      {/* Dynamic Lighting Rig with Soft Shadows */}
-      <ambientLight intensity={0.4} />
+      {/* Dynamic Lighting Rig with Laptop-Optimized Soft Shadows */}
+      <ambientLight intensity={0.45} />
       <directionalLight
         position={[16, 28, 12]}
-        intensity={1.4}
-        castShadow
-        shadow-mapSize={[2048, 2048]} // RTX 3060 Ti Crisp Shadows
+        intensity={1.3}
+        castShadow={!isEco}
+        shadow-mapSize={[shadowResolution, shadowResolution]}
         shadow-camera-near={1}
         shadow-camera-far={60}
         shadow-camera-left={-25}
@@ -58,7 +62,7 @@ export const TownScene: React.FC = () => {
         shadow-camera-bottom={-25}
         shadow-bias={-0.0001}
       />
-      <pointLight position={[0, 8, 0]} intensity={0.8} color="#00f2fe" distance={30} />
+      <pointLight position={[0, 8, 0]} intensity={0.7} color="#00f2fe" distance={30} />
 
       <Suspense fallback={null}>
         {/* Walkable NavMesh & Cyber Grid Ground */}
@@ -83,16 +87,18 @@ export const TownScene: React.FC = () => {
           />
         ))}
 
-        {/* Hardware-Accelerated Post-Processing (Bloom & Cinematic Vignette) */}
-        <EffectComposer multisampling={4}>
-          <Bloom
-            luminanceThreshold={0.7}
-            luminanceSmoothing={0.8}
-            intensity={1.2}
-            mipmapBlur
-          />
-          <Vignette eskil={false} offset={0.15} darkness={0.9} />
-        </EffectComposer>
+        {/* Post-Processing Pass (Active in Balanced & Performance modes) */}
+        {!isEco && (
+          <EffectComposer multisampling={2}>
+            <Bloom
+              luminanceThreshold={0.75}
+              luminanceSmoothing={0.8}
+              intensity={0.9} // Gentle bloom for Iris Xe
+              mipmapBlur
+            />
+            <Vignette eskil={false} offset={0.15} darkness={0.85} />
+          </EffectComposer>
+        )}
       </Suspense>
     </Canvas>
   );

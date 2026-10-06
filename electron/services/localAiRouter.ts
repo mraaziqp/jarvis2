@@ -8,7 +8,7 @@ import {
 export class LocalAiHybridRouter {
   private ollamaHost: string = '127.0.0.1';
   private ollamaPort: number = 11434;
-  private defaultLocalModel: string = 'llama3.2';
+  private defaultLocalModel: string = 'llama3.2:3b';
   private defaultEmbeddingModel: string = 'nomic-embed-text';
   private isOllamaAvailable: boolean = false;
 

@@ -1,0 +1,51 @@
+{
+  "name": "second-brain-jarvis",
+  "version": "2.1.0",
+  "description": "Unified Native Workspace: 2.5D R3F Subagent Town, Local Ollama Hybrid Router, Live Chokidar RAG, Ghost Mode & NutJS OS Automation",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"next dev\" \"wait-on tcp:3000 && electron .\"",
+    "next:dev": "next dev",
+    "next:build": "next build",
+    "next:start": "next start",
+    "electron:dev": "electron .",
+    "electron:build": "tsc -p tsconfig.electron.json && electron-builder",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@nut-tree/nut-js": "^4.0.1",
+    "@react-three/drei": "^9.114.0",
+    "@react-three/fiber": "^8.17.10",
+    "@react-three/postprocessing": "^2.16.3",
+    "chokidar": "^3.6.0",
+    "clsx": "^2.1.1",
+    "dotenv": "^16.4.5",
+    "lucide-react": "^0.453.0",
+    "next": "^14.2.15",
+    "nodemailer": "^6.9.15",
+    "pg": "^8.13.0",
+    "pgvector": "^0.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "screenshot-desktop": "^1.15.0",
+    "tailwind-merge": "^2.5.4",
+    "three": "^0.169.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.11",
+    "@types/nodemailer": "^6.4.16",
+    "@types/pg": "^8.11.10",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "@types/three": "^0.169.0",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.0.1",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13",
+    "typescript": "^5.6.3",
+    "wait-on": "^8.0.1"
+  }
+}
